@@ -1,0 +1,5 @@
+.vscode/
+*.o
+find_markers
+errors.txt
+find_markers.lst
