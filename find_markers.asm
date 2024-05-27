@@ -231,7 +231,6 @@ find_markers:
     mov ecx, ebx ; ecx = current_y
     sub ecx, DWORD[ebp-20] ; height=current_y - corner_y
 	imul ecx, 2 ; height * 2
-   ; mov DWORD[ebp-28], ecx ;move height*2 to ebp -28
     cmp ecx, DWORD[ebp-24] ; ?height*2==width
     jne .not_a_marker_2
     dec ebx ; back to y=239
@@ -256,6 +255,7 @@ find_markers:
 
 .check_arm_two_column_matb:
     cmp ebx, DWORD[ebp-20] ;?y==corner_y
+    je .restore_y
     mov eax, DWORD[ebp-12] ;restore x
     call get_pixel
     test eax, eax
