@@ -10,7 +10,7 @@ find_markers:
     push ebp
     mov ebp, esp
     
-    sub esp, 24
+    sub esp, 28
 
     push ebx
     push edi
@@ -23,6 +23,7 @@ find_markers:
     ;ebp-16 for corner x
     ;ebp-20 for corner y
     mov DWORD[ebp-24], 0 ;marker width
+    mov DWORD[ebp-28], 0 ;y coordinate saver
     mov edx, DWORD[ebp+8] ;load address of bitmap to edx
     
     xor eax, eax; eax - x coordinate
@@ -62,6 +63,7 @@ find_markers:
     test ebx, ebx
     jz .arm_one_row_0 ;if arm one at x=0 don't check below pixels
     dec ebx ;y-=1
+    mov DWORD[ebp-12], eax ;save current x
     call get_pixel ; get color of pixel below corner
     test eax, eax
     jz .not_a_marker_1
@@ -134,21 +136,181 @@ find_markers:
     jnz .not_a_marker_1
     dec eax ; go to the last black pixel in arm
     mov DWORD[ebp-12], eax ;save current x
-    inc eax
+    ; inc eax
 
     ; inc eax
     ; cmp eax, WIDTH
     ; jz .find_arm_one_top_skip_right_check
     ; dec eax
     ; jmp .find_arm_one_top_row
-    jmp .exit
-
-.find_arm_one_top_skip_right_check:
+    jmp .find_arm_one_top_skip_right_check
 
 .find_arm_one_top_row:
+    mov eax, DWORD[ebp-12] ;restore x
+    inc ebx ; y+=1
+    cmp ebx, HEIGHT
+    jge .not_a_marker_2 ;.exit
+    inc eax ;x+=1
+    call get_pixel ;check if right pixel white
+    test eax, eax
+    jz .not_a_marker_2
+    mov eax, DWORD[ebp-12] ;restore x
+    call get_pixel
+    test eax, eax
+    jnz .go_to_arm_two ;when arm one top was found go to arm two
+    jmp .find_arm_one_top_row
+
+.find_arm_one_top_skip_right_check:
+    mov eax, DWORD[ebp-12] ;restore x
+    inc ebx ; y+=1
+    cmp ebx, HEIGHT
+    jge .not_a_marker_2 ;.exit
+    call get_pixel
+    test eax, eax
+    jnz .go_to_arm_two ;when arm one top was found go to arm two
+    jmp .find_arm_one_top_skip_right_check
+
+.not_a_marker_2:
+    mov DWORD[ebp-8], 0 ; reset marker thickness counter
+    mov eax, DWORD[ebp-16] ; x = corner_x
+    add eax, DWORD[ebp-24] ; x+=width
+    inc eax
+    mov ebx, DWORD[ebp-20] ; y = corner_y
+    jmp .find_corner_in_row_loop
+
+.go_to_arm_two:
+    ; marker thickness calculations
+    mov ecx, ebx ; ecx = current_y
+    sub ecx, DWORD[ebp-20] ;arm one thickness = current_y - corner_y
+    mov DWORD[ebp-8], ecx ; move thickness value to ebp-8
+
+    mov eax, DWORD[ebp-12] ;restore x
+    dec eax ; x-=1
+    mov DWORD[ebp-12], eax ;save current x
+    jmp .check_arm_one_column
+
+.check_arm_one_column:
+    cmp ebx, DWORD[ebp-20] ; compare current_y and corner_y
+    je .check_above_pixel ;if current_y == corner_y jmp check_abouve_pixel
+    dec ebx ;y-=1
+    call get_pixel
+    test eax, eax
+    jnz .not_a_marker_2
+    mov eax, DWORD[ebp-12] ;restore x
+    jmp .check_arm_one_column
+
+.check_above_pixel:
+    mov eax, DWORD[ebp-12] ;restore x
+    add ebx, DWORD[ebp-8] ;go to row above arm one y+=arm_one_thickness
+    call get_pixel
+    test eax, eax
+    jz .find_arm_two_top
+    mov eax, DWORD[ebp-12] ;restore x
+    cmp eax, DWORD[ebp-16]; if current_x=corner_x its not a marker (cause there is no arm two - pixel above is not black)
+    jne .not_a_marker_2
+    jmp .go_to_arm_two
+
+.find_arm_two_top:
+    mov eax, DWORD[ebp-12] ;restore x
+    inc ebx ; y+=1
+    cmp ebx, HEIGHT
+    jge .marker_at_top_border ;if y >=240
+    inc eax ; x+=1
+    call get_pixel
+    test eax, eax
+    jz .not_a_marker_2 ;if pixel to the right of the right arm two border is black, it's not a marker
+    mov eax, DWORD[ebp-12] ;restore x
+    call get_pixel
+    test eax, eax
+    jnz .arm_two_top_found ;now check arm two right border pixels
+    mov eax, DWORD[ebp-12] ;restore x
+    jmp .find_arm_two_top
+
+.marker_at_top_border:
+    ;calculate_height_and_ratio
+    mov ecx, ebx ; ecx = current_y
+    sub ecx, DWORD[ebp-20] ; height=current_y - corner_y
+	imul ecx, 2 ; height * 2
+   ; mov DWORD[ebp-28], ecx ;move height*2 to ebp -28
+    cmp ecx, DWORD[ebp-24] ; ?height*2==width
+    jne .not_a_marker_2
+    dec ebx ; back to y=239
+    dec DWORD[ebp-8] ;marker thickness -=1 start of check if arms thickness is the same
+    jmp .marker_at_top_border_top_loop
+
+.marker_at_top_border_top_loop:
+    test eax, eax
+    jz .arm_two_right
+    cmp eax, DWORD[ebp-16] ;if top_most_right_x == corner_x jmp to check arm two right_side
+    je .arm_two_right
+    dec DWORD[ebp-8] ;marker thickness -=1
+    dec eax
+    mov DWORD[ebp-12], eax ;save current x
+    mov DWORD[ebp-28], ebx ;save current y
+    jmp .check_arm_two_column_matb
+
+.restore_y:
+    mov eax, DWORD[ebp-12] ;restore x
+    mov ebx, DWORD[ebp-28] ;restore y
+    jmp .marker_at_top_border_top_loop
+
+.check_arm_two_column_matb:
+    cmp ebx, DWORD[ebp-20] ;?y==corner_y
+    mov eax, DWORD[ebp-12] ;restore x
+    call get_pixel
+    test eax, eax
+    jnz .not_a_marker_2 ;if pixels in column are not black it's not a marker
+    dec ebx ;y-=1
+    jmp .check_arm_two_column_matb
+
+.arm_two_top_found:
+    ;calculate_height_and_ratio
+    ;calculate_height_and_ratio
+    mov ecx, ebx ; ecx = current_y
+    sub ecx, DWORD[ebp-20] ; height=current_y - corner_y
+	imul ecx, 2 ; height * 2
+    cmp ecx, DWORD[ebp-24] ; ?height*2==width
+    jne .not_a_marker_2
+    dec ebx ;go back to top black arm two row
+    dec DWORD[ebp-8] ;marker thickness -=1
+    jmp .arm_top_loop
+
+.arm_top_loop:
+    mov eax, DWORD[ebp-12] ;restore x
+    cmp eax, DWORD[ebp-16] ; ?x == corner_x
+    je .arm_two_right
+    test eax, eax ; ?x==0
+    jz .arm_two_right
+    dec eax
+    dec DWORD[ebp-8] ;marker thickness -=1
+    mov DWORD[ebp-12], eax ;save current x
+    mov DWORD[ebp-28], ebx ;save current y
+    jmp .check_arm_two_column
+
+.arm_top_above_pixel:
+    mov eax, DWORD[ebp-12] ;restore x
+    mov ebx, DWORD[ebp-28] ;restore y
+    inc ebx ; y+=1
+    call get_pixel
+    test eax, eax
+    jz .not_a_marker_2 ; if pixel above top is black it's not a marker
+    dec ebx
+    jmp .arm_top_loop
+
+.check_arm_two_column:
+    cmp ebx, DWORD[ebp-20] ; ?y==corner_y
+    je .arm_top_above_pixel
+    mov eax, DWORD[ebp-12] ;restore x
+    call get_pixel
+    test eax, eax
+    jnz .not_a_marker_2 ;if pixels in column are not black it's not a marker
+    dec ebx
+    jmp .check_arm_two_column
+
+.arm_two_right:
 
 .exit:
-    mov eax, DWORD[ebp-24]
+    mov eax, DWORD[ebp-4]
 
     pop edx
     pop esi

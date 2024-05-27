@@ -9,7 +9,7 @@ asm :
 cc : 
 	$(CC) -m32 -c -g -O0 main.cpp -o main.o &> errors.txt
 
-link : main.o
+link : cc
 	$(CC) -m32 -g -o find_markers main.o find_markers.o
 	
 clean :
