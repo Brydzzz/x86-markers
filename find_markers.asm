@@ -81,6 +81,7 @@ find_markers:
     mov eax, DWORD[ebp-12] ;restore x
     inc ebx ;check pixel in corner row
     call get_pixel
+    test eax, eax
     jnz .end_of_arm_one ;if pixel in corner row not black jump to end_of_arm_one
     mov eax, DWORD[ebp-12] ;restore x
     inc eax ; x+=1
@@ -308,6 +309,36 @@ find_markers:
     jmp .check_arm_two_column
 
 .arm_two_right:
+    cmp DWORD[ebp-8], 0 ; if thickness after substraction not 0, not_a_marker_2
+    je .not_a_marker_2
+    mov DWORD[ebp-12], eax ;save current x
+    jmp .arm_two_right_loop
+
+.arm_two_right_loop:
+    cmp ebx, DWORD[ebp-20] ; if we reach corner y, marker was found
+    je .marker_found
+    call get_pixel
+    test eax, eax ;check if arm pixel is black
+    jnz .not_a_marker_2
+    mov eax, DWORD[ebp-12] ;restore x
+    test eax, eax
+    jz .skip_right_check ; if marker is next to file left border
+    ;check pixel next to arm two pixel
+    dec eax
+    call get_pixel
+    test eax, eax
+    jz .not_a_marker_2
+    mov eax, DWORD[ebp-12] ;restore x
+    dec ebx
+    jmp .arm_two_right_loop
+
+.skip_right_check:
+    dec ebx
+    jmp .arm_two_right_loop
+
+.marker_found:
+    mov DWORD[ebp-4], 22
+    jmp .exit
 
 .exit:
     mov eax, DWORD[ebp-4]
