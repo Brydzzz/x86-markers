@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define fname "./test_bmps/borders.bmp"
+// #define fname "./test_bmps/example_markers.bmp"
 
 #define HEIGHT 240
 #define WIDTH 320
@@ -17,6 +17,18 @@ extern "C" int find_markers(char *bitmap, unsigned int *x_pos, unsigned int *y_p
 
 int main(int argc, char *argv[])
 {
+    std::string fname;
+    if (argc <= 1)
+    {
+        std::cout << "File not specified\n";
+        return -1;
+    }
+    else if (argc > 2)
+    {
+        std::cout << "Too many arguments\n";
+        return -1;
+    }
+    fname = argv[1];
     std::ifstream fileHandler;
     fileHandler.open(fname, std::ios::binary);
     if (fileHandler.good())
@@ -46,11 +58,11 @@ int main(int argc, char *argv[])
     unsigned int y_positions[MAX_NUMBER_OF_MARKERS];
 
     int numOfMarkers = find_markers(image, x_positions, y_positions);
-    std::cout << numOfMarkers << std::endl;
-    // for (int i = 0; i < numOfMarkers; ++i)
-    // {
-    //     std::cout << "Marker no." << i << "at row:" << y_positions[i] << "and column: " << x_positions[i] << '\n';
-    // }
+    // std::cout << numOfMarkers << std::endl;
+    for (int i = 0; i < numOfMarkers; ++i)
+    {
+        std::cout << "Marker no." << i + 1 << " at row:" << y_positions[i] << " and column: " << x_positions[i] << '\n';
+    }
     std::cout << "End of program.\n";
     return 0;
 }

@@ -52,7 +52,6 @@ find_markers:
 
 .possible_corner:
     mov eax, DWORD[ebp-12]
-    ;inc DWORD[ebp-4]
     jmp .arm_one
 
 .arm_one:
@@ -125,7 +124,7 @@ find_markers:
     jnz .not_a_marker_1
     dec eax ; go to the last black pixel in arm
     mov DWORD[ebp-12], eax ;save current x
-    jmp .exit ;.find_arm_one_top_row
+    jmp .find_arm_one_top_row
 
 .end_of_arm_one_file_border:
     mov eax, DWORD[ebp-12] ;restore x
@@ -208,7 +207,7 @@ find_markers:
     jz .find_arm_two_top
     mov eax, DWORD[ebp-12] ;restore x
     cmp eax, DWORD[ebp-16]; if current_x=corner_x its not a marker (cause there is no arm two - pixel above is not black)
-    jne .not_a_marker_2
+    je .not_a_marker_2
     jmp .go_to_arm_two
 
 .find_arm_two_top:
@@ -310,7 +309,7 @@ find_markers:
 
 .arm_two_right:
     cmp DWORD[ebp-8], 0 ; if thickness after substraction not 0, not_a_marker_2
-    je .not_a_marker_2
+    jne .not_a_marker_2
     mov DWORD[ebp-12], eax ;save current x
     jmp .arm_two_right_loop
 
@@ -337,8 +336,26 @@ find_markers:
     jmp .arm_two_right_loop
 
 .marker_found:
-    mov DWORD[ebp-4], 22
-    jmp .exit
+    ;add x coordinate to list
+    mov esi, DWORD[ebp+12] ; load pointer to x_positions
+    mov ecx, DWORD[ebp-4] ; load count of markers
+    mov DWORD[esi + 4*ecx], eax ;add x to list
+
+    ;add y coordinate to list
+    mov esi, DWORD[ebp+16] ; load pointer to y_positions
+
+    ;correct y coordinate
+    mov edi, HEIGHT
+    sub edi, ebx ; HEIGHT(240) - corner_y
+    dec edi ; corrected y coordinate
+
+    mov ecx, DWORD[ebp-4] ; load count of markers
+    mov DWORD[esi + 4*ecx], edi ;add y to list
+
+    ;increment counter of markers
+    inc DWORD[ebp-4]
+    
+    jmp .not_a_marker_2 ;find new markers
 
 .exit:
     mov eax, DWORD[ebp-4]
