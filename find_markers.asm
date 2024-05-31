@@ -10,7 +10,7 @@ find_markers:
     push ebp
     mov ebp, esp
     
-    sub esp, 36
+    sub esp, 40
 
     push ebx
     push edi
@@ -20,12 +20,13 @@ find_markers:
     mov DWORD[ebp-4], 0 ;set marker counter to 0
     mov DWORD[ebp-8], 0 ;set marker thickness counter to 0
     mov DWORD[ebp-12], 0 ;x coordiante saver
-    ;ebp-16 for corner x
-    ;ebp-20 for corner y
+    mov DWORD[ebp-16], 0;ebp-16 for corner x
+    mov DWORD[ebp-20], 0;ebp-20 for corner y
     mov DWORD[ebp-24], 0 ;marker width
     mov DWORD[ebp-28], 0 ;y coordinate saver
     mov DWORD[ebp-32], 0 ; image height
     mov DWORD[ebp-36], 0; image width
+    mov DWORD[ebp-40], 0; bytes per row
 
 .analyze_bitmap:
     mov edx, DWORD[ebp+8] ;load address of bitmap to edx
@@ -43,8 +44,21 @@ find_markers:
     mov cl, BYTE[edx+18]
     mov DWORD[ebp-36], ecx ;move image width to ebp-36
 
-    xor ecx, ecx
+    ;calculate bytes per row - ((BitPerPixel * Width + 31) // 32) * 4
+    imul ecx, 24 ; BitPerPixel * Width
+    add ecx, 31 ;(BitPerPixel * Width + 31)
+    
+    xor edx, edx ; clear dividend
+    mov eax, ecx ; dividend in eax
+    mov ecx, 32 ; divisor
+    
+    div ecx ; BitPerPixel * Width + 31) // 32
+    shl eax, 2 ;(BitPerPixel * Width + 31) // 32) * 4
+    mov DWORD[ebp-40], eax ; move bytes per row to ebp-40
+
     ; get offset to pixel data
+    xor ecx, ecx ;clear ecx after div
+    mov edx, DWORD[ebp+8] ;again load address of bitmap to edx, because edx was used for div
     mov cl, BYTE[edx+11] ;offset to pixel data
     shl ecx, 8
     mov cl, BYTE[edx+10]
@@ -55,9 +69,9 @@ find_markers:
     xor ebx, ebx; ebx - y coordinate
 
 .find_corner_in_row_loop:
-    cmp ebx, HEIGHT
+    cmp ebx, DWORD[ebp-32]
     jge .exit
-    cmp eax, WIDTH
+    cmp eax, DWORD[ebp-36]
     jge .next_row
     mov DWORD[ebp-12], eax
     call get_pixel
@@ -71,7 +85,7 @@ find_markers:
 .next_row:
     xor eax, eax ;x=0
     inc ebx; y+=1
-    cmp ebx, HEIGHT
+    cmp ebx, DWORD[ebp-32]
     jge .exit
     jmp .find_corner_in_row_loop
 
@@ -96,7 +110,7 @@ find_markers:
     jmp .arm_one_loop
 
 .arm_one_loop:
-    cmp eax, WIDTH ;if x>= 320 end of arm_one
+    cmp eax, DWORD[ebp-36] ;if x>= 320 end of arm_one
     jge .end_of_arm_one_file_border
     mov DWORD[ebp-12], eax ;save current x
     call get_pixel ;get color of pixel in row below corner
@@ -114,7 +128,7 @@ find_markers:
 
 
 .arm_one_row_0:
-    cmp eax, WIDTH ;if x>= 320 end of arm_one
+    cmp eax, DWORD[ebp-36] ;if x>= 320 end of arm_one
     jge .end_of_arm_one_file_border
     mov DWORD[ebp-12], eax ;save current x
     call get_pixel
@@ -173,7 +187,7 @@ find_markers:
 .find_arm_one_top_row:
     mov eax, DWORD[ebp-12] ;restore x
     inc ebx ; y+=1
-    cmp ebx, HEIGHT
+    cmp ebx, DWORD[ebp-32]
     jge .not_a_marker_2 ;.exit
     inc eax ;x+=1
     call get_pixel ;check if right pixel white
@@ -188,7 +202,7 @@ find_markers:
 .find_arm_one_top_skip_right_check:
     mov eax, DWORD[ebp-12] ;restore x
     inc ebx ; y+=1
-    cmp ebx, HEIGHT
+    cmp ebx, DWORD[ebp-32]
     jge .not_a_marker_2 ;.exit
     call get_pixel
     test eax, eax
@@ -238,7 +252,7 @@ find_markers:
 .find_arm_two_top:
     mov eax, DWORD[ebp-12] ;restore x
     inc ebx ; y+=1
-    cmp ebx, HEIGHT
+    cmp ebx, DWORD[ebp-32]
     jge .marker_at_top_border ;if y >=240
     inc eax ; x+=1
     call get_pixel
@@ -370,7 +384,7 @@ find_markers:
     mov esi, DWORD[ebp+16] ; load pointer to y_positions
 
     ;correct y coordinate
-    mov edi, HEIGHT
+    mov edi, DWORD[ebp-32]
     sub edi, ebx ; HEIGHT(240) - corner_y
     dec edi ; corrected y coordinate
 
@@ -408,10 +422,11 @@ get_pixel:
 
     ;pixel address calculation
     xor ecx, ecx ; reset ecx
-    imul ecx, ebx, WIDTH ; ecx = y*width
-    add ecx, eax ; ecx += x
-    imul ecx, 3 ; ecx*=3, cause 3 colors of pixel
-    add ecx, edx ; ecx+=bitmap address
+    mov ecx, DWORD[ebp+24] ; move bytes per row to ecx
+    imul ecx, ebx ; ecx = y*bytes_per_row
+    imul eax, 3 ; 3*x
+    add ecx, eax ; ecx += (3x)
+    add ecx, edx ; pixel_address = bitmap_address + (3*x + y * bytes_per_row)
 
     ;get color
     xor eax, eax ;reset eax

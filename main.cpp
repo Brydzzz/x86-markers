@@ -11,7 +11,6 @@ extern "C" int find_markers(unsigned char *bitmap, unsigned int *x_pos, unsigned
 
 int main(int argc, char *argv[])
 {
-    std::string fname;
     if (argc <= 1)
     {
         std::cout << "File not specified\n";
@@ -30,7 +29,7 @@ int main(int argc, char *argv[])
 
     if (fptr == NULL)
     {
-        std::cout << "Invalid filne name\n";
+        std::cout << "Invalid file name\n";
         return 0;
     }
 
@@ -57,7 +56,7 @@ int main(int argc, char *argv[])
     file_size += (unsigned int)header[4] * (1 << 16);
     file_size += (unsigned int)header[5] * (1 << 24);
 
-    std::cout << "Size of the bitmap: " << width << " x " << height << std::endl;
+    std::cout << "\nSize of the bitmap: " << width << " x " << height << std::endl;
 
     std::cout << "File size (in bytes): " << file_size << std::endl;
 
@@ -71,7 +70,7 @@ int main(int argc, char *argv[])
     unsigned int y_positions[MAX_NUMBER_OF_MARKERS];
 
     int num_of_markers = find_markers((unsigned char *)image, x_positions, y_positions);
-    std::cout << "Number of markers: " << num_of_markers << std::endl;
+    std::cout << "\nNumber of markers: " << num_of_markers << std::endl;
     for (int i = 0; i < num_of_markers; ++i)
     {
         std::cout << "Marker no." << i + 1 << " at row:" << y_positions[i] << " and column: " << x_positions[i] << '\n';
