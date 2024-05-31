@@ -32,6 +32,10 @@ int main(int argc, char *argv[])
         std::cout << "Invalid file name\n";
         return 0;
     }
+    else
+    {
+        std::cout << "File read successfully.";
+    }
 
     header = (unsigned char *)malloc(header_size);
     fgets((char *)header, header_size, fptr);
@@ -58,7 +62,7 @@ int main(int argc, char *argv[])
 
     std::cout << "\nSize of the bitmap: " << width << " x " << height << std::endl;
 
-    std::cout << "File size (in bytes): " << file_size << std::endl;
+    // std::cout << "File size (in bytes): " << file_size << std::endl;
 
     unsigned char *image = (unsigned char *)malloc(file_size * sizeof(unsigned char));
     fptr = fopen(argv[1], "r");
