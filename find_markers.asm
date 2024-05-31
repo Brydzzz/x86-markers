@@ -10,7 +10,7 @@ find_markers:
     push ebp
     mov ebp, esp
     
-    sub esp, 28
+    sub esp, 36
 
     push ebx
     push edi
@@ -24,8 +24,33 @@ find_markers:
     ;ebp-20 for corner y
     mov DWORD[ebp-24], 0 ;marker width
     mov DWORD[ebp-28], 0 ;y coordinate saver
+    mov DWORD[ebp-32], 0 ; image height
+    mov DWORD[ebp-36], 0; image width
+
+.analyze_bitmap:
     mov edx, DWORD[ebp+8] ;load address of bitmap to edx
-    
+
+    ;get height froom header
+    mov cl, BYTE[edx+23]
+    shl ecx, 8
+    mov cl, BYTE[edx+22]
+    mov DWORD[ebp-32], ecx ;move image height to ebp-32
+
+    xor ecx, ecx
+    ;get width from header
+    mov cl, BYTE[edx+19]
+    shl ecx, 8
+    mov cl, BYTE[edx+18]
+    mov DWORD[ebp-36], ecx ;move image width to ebp-36
+
+    xor ecx, ecx
+    ; get offset to pixel data
+    mov cl, BYTE[edx+11] ;offset to pixel data
+    shl ecx, 8
+    mov cl, BYTE[edx+10]
+
+    add edx, ecx ; load address of first pixel
+
     xor eax, eax; eax - x coordinate
     xor ebx, ebx; ebx - y coordinate
 
