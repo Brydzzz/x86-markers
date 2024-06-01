@@ -28,6 +28,7 @@ find_markers:
     mov edx, DWORD[ebp+8]   ; load address of bitmap to edx
 
     ;get image height from header
+    xor ecx, ecx
     mov cl, BYTE[edx+23]
     shl ecx, 8
     mov cl, BYTE[edx+22]
