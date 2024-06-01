@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // analyze header
     int header_size = 54 * sizeof(unsigned char);
     unsigned char *header;
     FILE *fptr;
@@ -30,18 +31,22 @@ int main(int argc, char *argv[])
     if (fptr == NULL)
     {
         std::cout << "Invalid file name\n";
-        return 0;
+        return -1;
     }
     else
     {
-        std::cout << "File read successfully.";
+        std::cout << "File read successfully :)\n";
     }
 
     header = (unsigned char *)malloc(header_size);
     fgets((char *)header, header_size, fptr);
     fclose(fptr);
 
-    if (header[0] != 0x42 || header[1] != 0x4D)
+    unsigned int bits_per_pixel = 0;
+    bits_per_pixel += (unsigned int)header[28];
+    bits_per_pixel += (unsigned int)header[29] * (1 << 8);
+
+    if (header[0] != 0x42 || header[1] != 0x4D || bits_per_pixel != 24)
     {
         std::cout << "Wrong file format (only 24bit bitmap is supported)\n";
         return -1;
@@ -62,8 +67,6 @@ int main(int argc, char *argv[])
 
     std::cout << "\nSize of the bitmap: " << width << " x " << height << std::endl;
 
-    // std::cout << "File size (in bytes): " << file_size << std::endl;
-
     unsigned char *image = (unsigned char *)malloc(file_size * sizeof(unsigned char));
     fptr = fopen(argv[1], "r");
     fgets((char *)image, file_size, fptr);
@@ -73,12 +76,15 @@ int main(int argc, char *argv[])
     unsigned int x_positions[MAX_NUMBER_OF_MARKERS];
     unsigned int y_positions[MAX_NUMBER_OF_MARKERS];
 
+    // call asm function
     int num_of_markers = find_markers((unsigned char *)image, x_positions, y_positions);
-    std::cout << "\nNumber of markers: " << num_of_markers << std::endl;
+
+    // print results
+    std::cout << "\nNumber of detected markers: " << num_of_markers << std::endl;
     for (int i = 0; i < num_of_markers; ++i)
     {
-        std::cout << "Marker no." << i + 1 << " at row:" << y_positions[i] << " and column: " << x_positions[i] << '\n';
+        std::cout << "Marker no." << i + 1 << " found at: (" << y_positions[i] << ", " << x_positions[i] << ")\n";
     }
-    std::cout << "End of program.\n";
+    std::cout << "\nEnd of program.\n";
     return 0;
 }
