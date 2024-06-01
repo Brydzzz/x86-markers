@@ -40,6 +40,7 @@ g++ -m32 -g -o find_markers main.o find_markers.o
 /usr/bin/ld: cannot find main.o: No such file or directory
 collect2: error: ld returned 1 exit status
 make: *** [makefile:13: link] Error 1
+
 >make
 nasm -o find_markers.o -f elf -g -l find_markers.lst find_markers.asm
 g++ -m32 -c -g -O0 main.cpp -o main.o &> errors.txt
