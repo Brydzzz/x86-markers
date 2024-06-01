@@ -298,9 +298,9 @@ find_markers:
     jne .not_a_marker_2 ; height*2!=width
     dec ebx     ; go back to top black arm two row
     dec DWORD[ebp-8]    ; marker thickness -=1
-    jmp .arm_top_loop
+    jmp .arm_two_top_loop
 
-.arm_top_loop:
+.arm_two_top_loop:
     mov eax, DWORD[ebp-12] ; restore x
     cmp eax, DWORD[ebp-16] 
     je .arm_two_right ; x == corner_x
@@ -320,7 +320,7 @@ find_markers:
     test eax, eax
     jz .not_a_marker_2 ; if pixel above top is black it's not a marker
     dec ebx
-    jmp .arm_top_loop
+    jmp .arm_two_top_loop
 
 .check_arm_two_column:
     cmp ebx, DWORD[ebp-20] 
