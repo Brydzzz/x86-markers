@@ -33,10 +33,6 @@ int main(int argc, char *argv[])
         std::cout << "Invalid file name\n";
         return -1;
     }
-    else
-    {
-        std::cout << "File read successfully :)\n";
-    }
 
     header = (unsigned char *)malloc(header_size);
     fgets((char *)header, header_size, fptr);
